@@ -6,25 +6,37 @@ var LITEMATH = LITEMATH || {};
 
 (function(_global) {
 
+/**
+ * 実行列クラス
+ */
 class Matrix {
     constructor(inopt) {
 /**
  * 行数
+ * @default 1
  */
         this.row = inopt?.row || 1;
 /**
  * 列数
+ * @default 1
  */
         this.col = inopt?.col || 1;
 
 /**
- * 'row' or col
+ * 'row' or 'col' 格納方向。row データ格納の場合横に 1,2,3 の順。
+ * なお列優先表現というのは 数学の行列みたく 行列 x 列ベクトル で書く方法。
+ * 行優先表現というのは Direct3D みたく 行ベクトル x 行列 で書く方法。
+ * @default 'row'
  */
         this.major = inopt?.major ?? 'row';
 /**
  * 一直線に並べた typed array
  */
         this.array = inopt?.array ?? new Float64Array(this.row * this.col);
+
+        this.ERR_NOTSQUARE = 'not square';
+        this.ERR_SIZENOTMATCH = 'size not match';
+        this.ERR_NI = 'not implemented';
     }
 
 /**
@@ -45,11 +57,24 @@ class Matrix {
     }
 
 /**
+ * 配列からこの行列にセットする。破壊。
+ * @param {number[]} inarray 
+ */
+    setArray(inarray) {
+        const num = Math.min(this.array.length, inarray.length);
+        for (let i = 0; i < num; ++i) {
+            this.array[i] = inarray[i];
+        }
+        return this;
+    }
+
+/**
  * 単位行列を新しく作って返す
  * @param {number} indim 
+ * @param {number} [incoeff=1] 係数
  * @returns {Matrix}
  */
-    createEigen(indim) {
+    createEigen(indim, incoeff = 1) {
         const m = new Matrix({
             row: indim,
             col: indim,
@@ -57,7 +82,7 @@ class Matrix {
         });
         const p = m.array;
         for (let i = 0; i < indim; ++i) {
-            p[(m.col + 1) * i] = 1;
+            p[(m.col + 1) * i] = incoeff;
         }
         return m;
     }
@@ -120,8 +145,9 @@ class Matrix {
 
 /**
  * 余因子行列を新しく作って返す
- * @param {number} inrow 
- * @param {number} incol 
+ * @param {number} inrow 行位置
+ * @param {number} incol 列位置
+ * @returns {Matrix} 余因子行列
  */
     cofactorrc(inrow, incol) {
         if (this.row <= 1 || this.col <= 1) {
@@ -249,7 +275,7 @@ class Matrix {
 
 /**
  * 余因子で行列式を計算する
- * @returns {number}
+ * @returns {number} 行列式のスカラー値
  */
     detcofactor() {
         if (this.row !== this.col) {
@@ -285,6 +311,190 @@ class Matrix {
     }
 
 /**
+ * スカラー倍つき加算した新しい行列を返す
+ * @param {Matrix} mb 足す行列
+ * @param {number} [cb=1] mb 行列に掛ける係数
+ * @param {number} [c=1] この行列に掛ける係数 
+ * @returns {Matrix}
+ */
+    add(mb, cb = 1, c = 1) {
+        if (this.row !== inm.row || this.col !== inm.col) {
+            throw new Error(this.ERR_SIZENOTMATCH);
+        }
+
+        const m = new Matrix({
+            row: mb.row,
+            col: mb.col,
+            major: 'row',
+        });
+        for (let i = 0; i < mb.row; ++i) {
+            for (let j = 0; j < mb.col; ++j) {
+                let offset = mb.col * i + j;
+                m.array[offset] = this.array[offset] * c + mb.array[offset] * cb;
+            }
+        }
+        return m;
+    }
+
+/**
+ * この行列の固有方程式の係数を返す。
+ * 3次以下のみ。
+ * @returns {number[]} 0次から3次へ
+ */
+    eigenequotion() {
+        if (this.row !== this.col) {
+            throw new Error(this.ERR_NOTSQUARE);
+        }
+        const num = this.row;
+
+        if (num === 1) {
+            return [this.array[0], -1];
+        }
+        if (num === 2) {
+            return [this.detcofactor(), - this.trace(), 1];
+        }
+        const p = this.array;
+        if (num === 3) {
+            return [
+                this.detcofactor(),
+                (p[1] * p[3] + p[2] * p[6] + p[5] * p [7])
+                    - (p[4] * p[8] + p[8] * p[0] + p[0] * p[4]),
+                this.trace(),
+                -1,
+            ];
+        }
+
+        /*
+        if (num === 4) {
+            const ret = [
+                this.detcofactor(),
+                -0,
+                0,
+                - this.trace(),
+                1,
+            ];
+        }
+        */
+
+        throw new Error(this.ERR_NI);
+    }
+
+/**
+ * 3次方程式の実解を探す
+ * 不使用。非実装
+ * @param {number[]} incoeffs 
+ */
+    search3(incoeffs) {
+        const coeffs = [0, 0, 0, 0];
+        for (let i = 0; i < incoeffs.length; ++i) {
+            coeffs[i] = incoeffs[i];
+        }
+        if (coeffs[3] === 0) {
+            if (coeffs[2] === 0) {
+                if (coeffs[1] === 0) {
+                    if (coeffs[0] === 0) {
+                        return 'na'; // 任意の値
+                    }
+                    return []; // 存在しない
+                }
+                // 0 = coeffs[1] * x + coeffs[0]
+                return [- coeffs[0] / coeffs[1]];
+            }
+            const d = Math.pow(coeffs[1], 2) - 4 * coeffs[2] * coeffs[0];
+            if (d < 0) {
+                return [];
+            }
+            const ret = [
+                -4 * coeffs[1] - Math.sqrt(d),
+                -4 * coeffs[1] + Math.sqrt(d),
+            ];
+            return ret.map(v => v / 2 / coeffs[2]);
+        }
+
+        if (coeffs[3] < 0) {
+            for (let i = 0; i < coeffs.length; ++i) {
+                coeffs[i] *= -1;
+            }
+        }
+
+        const maxnum = 1000;
+        let minrange = -99999;
+        let maxrange =  99999;
+        for (let i = 0; i < 1000; ++i) {
+
+        }
+
+
+        const ret = [
+            null,
+            null,
+            null,
+        ];
+        return ret;
+    }
+
+/**
+ * 0以上の実3解を持つ3次方程式の最小の実解を探す
+ * @param {number[]} incoeffs 3次方程式の係数。0次から3次へ。
+ */
+searchMin(incoeffs) {
+    const coeffs = [0, 0, 0, 0];
+
+// 3次の係数がマイナスになるようにする
+    let k = (incoeffs[3] > 0) ? -1 : 1;
+    for (let i = 0; i < incoeffs.length; ++i) {
+        coeffs[i] = incoeffs[i] * k;
+    }
+
+/**
+ * 3次式を計算する
+ * @param {number} x 
+ * @returns {number}
+ */
+    const _f = (x) => {
+        return coeffs[0] + coeffs[1] * x
+        + coeffs[2] * (x ** 2)
+        + coeffs[3] * (x ** 3);
+    };
+
+    const spans = [
+        { x: 0, y: _f(0), err: 10 ** 9 },
+        { x: 0, y: _f(0), err: 10 ** 9 },
+    ];
+
+    //// 1回微分した後の2次方程式
+    const d2s = [coeffs[1] * 1, coeffs[2] * 2, coeffs[3] * 3];
+    const decide = d2s[1] ** 2 - 4 * d2s[0] * d2s[2];
+    if (decide < 0) { // 虚数解のみ
+        // 本来ありえない
+    } else { // 二解
+        let ans2s = [
+            (- d2s[1] - Math.sqrt(decide)) / (2 * d2s[2]),
+            (- d2s[1] + Math.sqrt(decide)) / (2 * d2s[2]),
+        ];
+
+        spans[1].x = Math.min(...ans2s);
+        spans[1].y = _f(spans[1].x);
+        spans[1].err = Math.abs(spans[1].y - 0);
+    }
+
+    for (let i = 0; i < 30; ++i) {
+        let x = (spans[0].x + spans[1].x) * 0.5;
+        const y = _f(x);
+        const obj = {
+            x,
+            y,
+            err: Math.abs(y - 0),
+        };
+        spans[(y >= 0 ? 0 : 1)] = obj;
+    }
+
+    return (spans[(spans[0].err <= spans[1].err ? 0 : 1)].x);
+}
+
+
+/**
+ * 行列のマークダウンを作文して返す
  * $$ $$ を含まない
  */
     totex() {
@@ -315,10 +525,51 @@ class Matrix {
         return lines.join('\n');
     }
 
+/**
+ * 行列を文字列で
+ * @returns {string}
+ */
+    toString() {
+        let s = `matrix col: ${this.col} row: ${this.row} \n`;
+        for (let i = 0; i < this.row; ++i) {
+            let start = i * this.col;
+            s += this.m.slice(start, start + this.col).map(v => {
+                return v.toFixed(3);
+            }).join(', ');
+            s += '\n';
+        }
+        return s;
+    }
+
+}
+
+class Matrix2 extends Matrix {
+    constructor() {
+        super({
+            row: 2, col: 2,
+        });
+    }
+}
+
+class Matrix3 extends Matrix {
+    constructor() {
+        super({
+            row: 3, col: 3,
+        });
+    }
+}
+
+class Matrix4 extends Matrix {
+    constructor() {
+        super({ row: 4, col: 4 });
+    }
 }
 
 
 LITEMATH.Matrix = Matrix;
+LITEMATH.Matrix2 = Matrix2;
+LITEMATH.Matrix3 = Matrix3;
+LITEMATH.Matrix4 = Matrix4;
 _global.LITEMATH = LITEMATH;
 
 
