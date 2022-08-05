@@ -70,18 +70,24 @@ class Misc {
 // obj.vecs でなにかする
         console.log('未実装', obj.vecs);
 
+        {
+            const el = document.getElementById('resultelement');
+            if (el) {
+                el.textContent = ``;
+            }
+        }
     }
 
 /**
  * 
  */
     test1() {
-        const m1 = new LITEMATH.Matrix().createEigen(3);
-        const m2 = new LITEMATH.Matrix().createEigen(3);
+        const m1 = new LITEMATH.Matrix3().createEigen();
+        const m2 = new LITEMATH.Matrix3().createEigen();
 
         const m3 = m1.mulfromright(m2);
 
-        console.log(m3.totex());
+        console.log('test1', m3.totex());
     }
 
 /**
@@ -95,21 +101,21 @@ class Misc {
         });
 
         const coeffs = m1.eigenequotion();
-        console.log('coeffs', coeffs);
+        console.log('test2 coeffs', coeffs);
     }
 
 /**
  * 
  */
     test3() {
-
+        console.log('test3');
     }
 
 /**
  * 
  */
     test4() {
-
+        console.log('test4');
     }
 }
 

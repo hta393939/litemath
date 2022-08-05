@@ -70,18 +70,19 @@ class Matrix {
 
 /**
  * 単位行列を新しく作って返す
- * @param {number} indim 
+ * @param {number} [indim=0] 0 を指定した場合，this.row を使用する
  * @param {number} [incoeff=1] 係数
  * @returns {Matrix}
  */
     createEigen(indim, incoeff = 1) {
+        const dim = indim ?? this.row;
         const m = new Matrix({
-            row: indim,
-            col: indim,
+            row: dim,
+            col: dim,
             major: 'row',
         });
         const p = m.array;
-        for (let i = 0; i < indim; ++i) {
+        for (let i = 0; i < dim; ++i) {
             p[(m.col + 1) * i] = incoeff;
         }
         return m;
