@@ -92,6 +92,19 @@ class Matrix {
     }
 
 /**
+ * ベクトルの長さを返す
+ * @returns {number}
+ */
+    length() {
+        const num = this.array.length;
+        let sum = 0;
+        for (let i = 0; i < num; ++i) {
+            sum += this.array[i] ** 2;
+        }
+        return Math.sqrt(sum);
+    }
+
+/**
  * この行列と引数の内積を計算する
  * @param {Matrix} b 
  */
@@ -106,7 +119,7 @@ class Matrix {
 
 /**
 * 破壊で正規化する
-* @returns {Vector}
+* @returns {Matrix}
 */
     normalize() {
         const num = this.array.length;
@@ -121,6 +134,16 @@ class Matrix {
             }
         }
         return this;
+    }
+
+/**
+ * 正規化したベクトルを新しく作成して返す
+ * @returns {Matrix}
+ */
+    makeNormalize() {
+        const ret = this.clone();
+        ret.normalize();
+        return ret;
     }
 
 /**
@@ -181,6 +204,7 @@ class Matrix {
 
 /**
  * 余因子行列を新しく作って返す
+ * 元の行列より1つずつ小さくなる
  * @param {number} inrow 行位置
  * @param {number} incol 列位置
  * @returns {Matrix} 余因子行列
@@ -246,35 +270,6 @@ class Matrix {
             offset += num + 1;
         }
         return sum;
-    }
-
-/**
- * major row only
- * この行列に右から rm を掛けた新しい行列を返す
- * @param {Matrix} rm 
- * @returns {Matrix}
- */
-    mulfromright(rm) {
-        if (this.col !== rm.row) {
-            throw new Error('size not match');
-        }
-        const num = rm.row;
-        const m = new Matrix({
-            row: this.row,
-            col: rm.col,
-            major: 'row',
-        });
-        const p = m.array;
-        for (let i = 0; i < m.row; ++i) {
-            for (let j = 0; j < m.col; ++j) {
-                let sum = 0;
-                for (let k = 0; k < num; ++k) {
-                    sum += this.array[this.col * i + k] * rm.array[m.col * k + j];
-                }
-                p[m.col * i + j] = sum;
-            }
-        }
-        return m;
     }
 
 /**
@@ -344,6 +339,26 @@ class Matrix {
         }
 //        }
         return sum;
+    }
+
+/**
+ * 逆行列もどきを計算する
+ */
+    makePseudoinv() {
+        if (this.row !== this.col) {
+            throw new Error(Matrix.ERR_NOTSQUARE);
+        }
+        const ret = {
+            det: this.detcofactor(),
+            m: this.clone(),
+        };
+        for (let i = 0; i < this.row; ++i) {
+            for (let j = 0; j < this.col; ++j) {
+                const tm = this.cofactorrc(j, i);
+                ret.m.array[this.col * i + j] = ((-1) ** (i + j)) * tm.detcofactor();
+            }
+        }
+        return ret;
     }
 
 /**
@@ -638,7 +653,7 @@ searchMin(incoeffs) {
         for (let i = 0; i < this.row; ++i) {
             let start = i * this.col;
             s += this.array.slice(start, start + this.col).map(v => {
-                return v.toFixed(3);
+                return v.toFixed(6);
             }).join(', ');
             s += '\n';
         }
