@@ -6,10 +6,16 @@ var LITEMATH = LITEMATH || {};
 
 (function(_global) {
 
+
+
 /**
  * 実行列クラス
  */
 class Matrix {
+    static ERR_NOTSQUARE = 'not square';
+    static ERR_SIZENOTMATCH = 'size not match';
+    static ERR_NI = 'not implemented';
+
     constructor(inopt) {
 /**
  * 行数
@@ -31,12 +37,9 @@ class Matrix {
         this.major = inopt?.major ?? 'row';
 /**
  * 一直線に並べた typed array
+ * @type {Float64Array}
  */
         this.array = inopt?.array ?? new Float64Array(this.row * this.col);
-
-        this.ERR_NOTSQUARE = 'not square';
-        this.ERR_SIZENOTMATCH = 'size not match';
-        this.ERR_NI = 'not implemented';
     }
 
 /**
@@ -70,12 +73,12 @@ class Matrix {
 
 /**
  * 単位行列を新しく作って返す
- * @param {number} [indim=0] 0 を指定した場合，this.row を使用する
+ * @param {number} indim 
  * @param {number} [incoeff=1] 係数
  * @returns {Matrix}
  */
-    createEigen(indim, incoeff = 1) {
-        const dim = indim ?? this.row;
+    static CreateIdentity(indim, incoeff = 1) {
+        const dim = indim;
         const m = new Matrix({
             row: dim,
             col: dim,
@@ -86,6 +89,38 @@ class Matrix {
             p[(m.col + 1) * i] = incoeff;
         }
         return m;
+    }
+
+/**
+ * この行列と引数の内積を計算する
+ * @param {Matrix} b 
+ */
+    dot(b) {
+        const num = Math.min(this.array.length, b.array.length);
+        let sum = 0;
+        for (let i = 0; i < num; ++i) {
+            sum += this.array[i] * b.array[i];
+        }
+        return sum;
+    }
+
+/**
+* 破壊で正規化する
+* @returns {Vector}
+*/
+    normalize() {
+        const num = this.array.length;
+        let sum = 0;
+        for (let i = 0; i < num; ++i) {
+            sum += this.array[i] ** 2;
+        }
+        if (sum !== 0) {
+            const k = 1 / Math.sqrt(sum);
+            for (let i = 0; i < num; ++i) {
+                this.array[i] *= k;
+            }
+        }
+        return this;
     }
 
 /**
@@ -312,15 +347,36 @@ class Matrix {
     }
 
 /**
+ * 破壊。この行列にスカラー倍つきで加算する
+ * @param {Matrix} mb 足す行列
+ * @param {number} [cb=1] mb 行列に掛ける係数
+ * @param {number} [c=1] この行列に掛ける係数 
+ * @returns {Matrix}
+ */
+add(mb, cb = 1, c = 1) {
+    if (this.row !== mb.row || this.col !== mb.col) {
+        throw new Error(Matrix.ERR_SIZENOTMATCH);
+    }
+
+    for (let i = 0; i < mb.row; ++i) {
+        for (let j = 0; j < mb.col; ++j) {
+            let offset = mb.col * i + j;
+            this.array[offset] = this.array[offset] * c + mb.array[offset] * cb;
+        }
+    }
+    return this;
+}
+
+/**
  * スカラー倍つき加算した新しい行列を返す
  * @param {Matrix} mb 足す行列
  * @param {number} [cb=1] mb 行列に掛ける係数
  * @param {number} [c=1] この行列に掛ける係数 
  * @returns {Matrix}
  */
-    add(mb, cb = 1, c = 1) {
-        if (this.row !== inm.row || this.col !== inm.col) {
-            throw new Error(this.ERR_SIZENOTMATCH);
+    makeAdd(mb, cb = 1, c = 1) {
+        if (this.row !== mb.row || this.col !== mb.col) {
+            throw new Error(Matrix.ERR_SIZENOTMATCH);
         }
 
         const m = new Matrix({
@@ -338,13 +394,60 @@ class Matrix {
     }
 
 /**
+ * 破壊でスカラー倍
+ * @param {number} k 
+ * @returns {Vector}
+ */
+    multiplyScalar(k) {
+        const num = this.array.length;
+        for (let i = 0; i < num; ++i) {
+            this.array[i] *= k;
+        }
+        return this;
+    }
+
+/**
+ * 新しいスカラー倍を返す
+ * @param {number} k 
+ * @returns {Vector}
+ */
+    makeMultiplyScalar(k) {
+        const ret = this.clone();
+        ret.multiplyScalar(k);
+        return ret;
+    }
+
+/**
+ * 新しい行列を返す。row major のみ
+ * @param {Matrix} b 
+ */
+    makeMultiply(b) {
+        if (this.col !== b.row) {
+            throw new Error(Matrix.ERR_SIZENOTMATCH);
+        }
+        const num = this.col;
+
+        const ret = new Matrix({ row: b.row, col: this.col });
+        for (let i = 0; i < ret.row; ++i) {
+            for (let j = 0; j < ret.col; ++j) {
+                let sum = 0.0;
+                for (let k = 0; k < num; ++k) {
+                    sum += this.array[this.col * i + k] * b.array[b.col * k + j];
+                }
+                ret.array[ret.col * i + j] = sum;
+            }
+        }
+        return ret;
+    }
+
+/**
  * この行列の固有方程式の係数を返す。
  * 3次以下のみ。
  * @returns {number[]} 0次から3次へ
  */
     eigenequotion() {
         if (this.row !== this.col) {
-            throw new Error(this.ERR_NOTSQUARE);
+            throw new Error(Matrix.ERR_NOTSQUARE);
         }
         const num = this.row;
 
@@ -377,7 +480,7 @@ class Matrix {
         }
         */
 
-        throw new Error(this.ERR_NI);
+        throw new Error(Matrix.ERR_NI);
     }
 
 /**
@@ -534,12 +637,84 @@ searchMin(incoeffs) {
         let s = `matrix col: ${this.col} row: ${this.row} \n`;
         for (let i = 0; i < this.row; ++i) {
             let start = i * this.col;
-            s += this.m.slice(start, start + this.col).map(v => {
+            s += this.array.slice(start, start + this.col).map(v => {
                 return v.toFixed(3);
             }).join(', ');
             s += '\n';
         }
         return s;
+    }
+
+/**
+ * 破壊。各要素の大きい方を残す。
+ * @param {Matrix} b 
+ * @returns 
+ */
+    max(b) {
+        const num = Math.min(this.array.length, b.array.length);
+        for (let i = 0; i < num; ++i) {
+            this.array[i] = Math.max(this.array[i], b.array[i]);
+        }
+        return this;
+    }
+
+/**
+ * 新しい各要素の大きい方を返す
+ * @param {Matrix} b 
+ * @returns 
+ */
+    makeMax(b) {
+        const ret = this.clone();
+        ret.max(b);
+        return ret;
+    }
+
+/**
+ * 破壊。各要素の小さい方を残す。
+ * @param {Matrix} b 
+ * @returns {Matrix} this 
+ */
+    min(b) {
+        const num = Math.min(this.array.length, b.array.length);
+        for (let i = 0; i < num; ++i) {
+            this.array[i] = Math.min(this.array[i], b.array[i]);
+        }
+        return this;
+    }
+
+/**
+ * 新しい各要素の小さい方を返す
+ * @param {Matrix} b 
+ * @returns 
+ */
+    makeMin(b) {
+        const ret = this.clone();
+        ret.min(b);
+        return ret;
+    }
+
+/**
+ * 破壊。絶対値にする。
+ * @returns {Matrix}
+ */
+    abs() {
+        const num = this.array.length;
+        for (let i = 0; i < num; ++i) {
+            this.array[i] = Math.abs(this.array[i]);
+        }
+        return this;
+    }
+
+/**
+ * このベクトルと引数の外積を返す
+ * @param {Matrix} b 
+ */
+    makeCross(b) {
+        const ret = new Matrix({ row: 3, col: 1 });
+        ret.array[0] = this.array[1] * b.array[2] - this.array[2] * b.array[1];
+        ret.array[1] = this.array[2] * b.array[0] - this.array[0] * b.array[2];
+        ret.array[2] = this.array[0] * b.array[1] - this.array[1] * b.array[0];
+        return ret;
     }
 
 }
@@ -550,6 +725,9 @@ class Matrix2 extends Matrix {
             row: 2, col: 2,
         });
     }
+    static CreateIdentity() {
+        return Matrix.CreateIdentity(2);
+    }
 }
 
 class Matrix3 extends Matrix {
@@ -558,14 +736,50 @@ class Matrix3 extends Matrix {
             row: 3, col: 3,
         });
     }
+    static CreateIdentity() {
+        return Matrix.CreateIdentity(3);
+    }
 }
 
 class Matrix4 extends Matrix {
     constructor() {
         super({ row: 4, col: 4 });
     }
+    static CreateIdentity() {
+        return Matrix.CreateIdentity(4);
+    }
 }
 
+
+class Vector extends Matrix {
+    constructor(inopt) {
+        super(inopt);
+    }
+}
+
+class Vector2 extends Vector {
+    constructor(inopt) {
+        super({ row: 2, col: 1 });
+    }
+}
+
+class Vector3 extends Vector {
+    constructor(inopt) {
+        super({ row: 3, col: 1 });
+    }
+}
+
+class Vector4 extends Vector {
+    constructor(inopt) {
+        super({ row: 4, col: 1 });
+    }
+}
+
+
+LITEMATH.Vector = Vector;
+LITEMATH.Vector2 = Vector2;
+LITEMATH.Vector3 = Vector3;
+LITEMATH.Vector4 = Vector4;
 
 LITEMATH.Matrix = Matrix;
 LITEMATH.Matrix2 = Matrix2;
