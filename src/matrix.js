@@ -92,6 +92,14 @@ class Matrix {
     }
 
 /**
+ * すべての要素が ちょうど0 かどうか
+ * @returns {boolean}
+ */
+    isZero() {
+        return !this.array.some(v => v !== 0);
+    }
+
+/**
  * ベクトルの長さを返す
  * @returns {number}
  */
@@ -200,6 +208,19 @@ class Matrix {
             offset = this.row * incol + inrow;
         }
         return this.array[offset];
+    }
+
+/**
+ * 列ベクトルを取り出す
+ * @param {number} incol 
+ */
+    getcolvec(incol) {
+        const ret = new LITEMATH.Matrix({ row: this.row, col: 1 });
+        const num = this.row;
+        for (let i = 0; i < num; ++i) {
+            ret.array[i] = this.array[this.col * i + incol]; 
+        }
+        return ret;
     }
 
 /**

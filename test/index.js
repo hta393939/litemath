@@ -120,7 +120,6 @@ class Misc {
         }
 
         {
-            // 未実装
 // 0 1 2
 // 3 4 5
 // 6 7 8
@@ -146,31 +145,68 @@ class Misc {
 
             const c3s = m.eigenequotion();
             const real = m.searchMin(c3s);
-            const iden = LITEMATH.Matrix.CreateIdentity(3, real);
 
-            const m2 = m.makeAdd(iden, -1);
-            const result = m2.makePseudoinv();
+            const eigenvalues = [real];
 
-            const mulm4 = m2.makeMultiply(result.m);
+            if (Math.abs(c3s[0]) < 0.1 ** -10) {
+                console.log('x = 0 の解を持つ');
+                const c2s = [c3s[1], c3s[2], c3s[3]];
+                const decide = c2s[1] ** 2 - 4 * c2s[2] * c2s[0];
+                if (decide < 0) {
+                    // 虚数解
+                } else {
+                    const ans2s = [
+                        (- c2s[1] - Math.sqrt(decide)) / (2 * c2s[2]),
+                        (- c2s[1] + Math.sqrt(decide)) / (2 * c2s[2]),
+                    ];
+                    console.log('ans2s', ans2s);
+                    eigenvalues.push(...ans2s);
+                }
+            }
 
-            const result3 = new LITEMATH.Matrix({ row: 3, col: 1 });
-            for (let j = 0; j < 3; ++j) {
+            // 規定は文字列でソート!
+            //eigenvalues.sort();
+
+            // わけわからん。(a - b) のかっこ必要なのかも。
+            eigenvalues.sort((a, b) => {
+                return (a - b);
+            });
+            console.log('sorted', eigenvalues);
+
+            for (const eigenvalue of eigenvalues) {
+                console.log('%c固有値', 'color:deepskyblue;', eigenvalue);
+
+                const iden = LITEMATH.Matrix.CreateIdentity(3, eigenvalue);
+
+                const m2 = m.makeAdd(iden, -1);
+                const result = m2.makePseudoinv();
+
+                const mulm4 = m2.makeMultiply(result.m);
+
+
+                let result3 = new LITEMATH.Matrix({ row: 3, col: 1 });
+                for (let j = 0; j < 3; ++j) {
+                    result3 = result.m.getcolvec(j);
+                /*
                 result3.setArray([
                     result.m.array[j],
                     result.m.array[j+3],
                     result.m.array[j+6]
                 ]);
-                if (result3.length() !== 0) {
-                    break;
+                */
+                    if (!result3.isZero()) {
+                        break;
+                    }
                 }
-            }
-            {
-                console.log('result3 ベクトル', result3, result3.toString());
-                window.resultelement.textContent = `${result3.normalize().array.map(v => v.toFixed(3)).join(', ')}`;
+                {
+                    console.log('result3 ベクトル', result3, result3.toString());
+                    window.resultelement.textContent = `${result3.normalize().array.map(v => v.toFixed(3)).join(', ')}`;
+                }
+
+                console.log('result.det ほぼ零', result.det, 'result.m ', result.m.toString());
+                console.log('mulm4 零?', mulm4.toString());
             }
 
-            console.log('result.m ', result.m.toString());
-            console.log('mulm4 零?', mulm4.toString());
             console.log('real 実解', real);
             console.log('c3s 固有方程式の係数', c3s.toString());
             console.log('m', m.toString());
