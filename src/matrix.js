@@ -211,10 +211,10 @@ class Matrix {
     }
 
 /**
- * 列ベクトルを取り出す
+ * 列ベクトルを新しく取り出す
  * @param {number} incol 
  */
-    getcolvec(incol) {
+    getColVec(incol) {
         const ret = new LITEMATH.Matrix({ row: this.row, col: 1 });
         const num = this.row;
         for (let i = 0; i < num; ++i) {
@@ -365,7 +365,7 @@ class Matrix {
 /**
  * 逆行列もどきを計算する
  */
-    makePseudoinv() {
+    makePseudoInv() {
         if (this.row !== this.col) {
             throw new Error(Matrix.ERR_NOTSQUARE);
         }
@@ -666,6 +666,15 @@ searchMin(incoeffs) {
     }
 
 /**
+ * @returns {string}
+ */
+    tocsv() {
+        return this.array.map(v => {
+            return v.toFixed(6);
+        }).join(', ');
+    }
+
+/**
  * 行列を文字列で
  * @returns {string}
  */
@@ -680,6 +689,7 @@ searchMin(incoeffs) {
         }
         return s;
     }
+
 
 /**
  * 破壊。各要素の大きい方を残す。
@@ -751,6 +761,101 @@ searchMin(incoeffs) {
         ret.array[1] = this.array[2] * b.array[0] - this.array[0] * b.array[2];
         ret.array[2] = this.array[0] * b.array[1] - this.array[1] * b.array[0];
         return ret;
+    }
+
+/**
+ * (0, 0, -1) を
+ * extrinsic XYZ で回転する分解のうち一つを返す
+ * rad ではなく deg. Z成分は0とする
+ * @returns {Matrix}
+ */
+    fromNZtoThisByExtXYZ() {
+        const ret = new LITEMATH.Matrix({ row: 3, col: 1 });
+        const dir = this.clone().normalize();
+        const x = dir.array[0];
+        const y = dir.array[1];
+        const z = dir.array[2];
+        if (x === 0 && y === 0) { // そのままか180度回転
+            if (z <= 0) {
+                return ret;
+            }
+            ret.array[1] = 180;
+            return ret;
+        }
+        if (z === 0) {
+            if (x === 0) { // 天井か床
+                ret.array[0] = (y > 0) ? 90 : -90;
+                return ret;
+            }
+            ret.array[1] = (x > 0) ? -90 : 90;
+            //ret.array[0] = Math.atan2(Math.abs(x), y);
+            return ret;
+        }
+
+        const r2 = Math.sqrt(z ** 2 + x ** 2);
+//        ret.array[1] = Math.atan2(0, 0);
+//        ret.array[0] = Math.atan2(0, 0);
+        return ret;
+    }
+
+/**
+ * extrinsic XYZ 回転行列を新しく作成する
+ * @param {number} inx deg
+ * @param {number} iny deg
+ * @param {number} inz deg
+ * @returns {Matrix}
+ */
+    static CreateRotExtXYZ(inx, iny, inz) {
+        const mx = new LITEMATH.Matrix({ row: 3, col: 3 });
+        const my = mx.clone();
+        const mz = mx.clone();
+
+        const _cs = (deg) => {
+            const ret = {
+                cs: Math.cos(inx * Math.PI / 180),
+                sn: Math.sin(inx * Math.PI / 180),
+            };
+            if (deg === 90) {
+                cs = 0;
+                sn = 1;
+            } else if (deg === 180) {
+                cs = -1;
+                sn = 0;
+            } else if (deg === 270) {
+                cs = 0;
+                sn = -1;
+            }
+            return ret;
+        };
+
+        {
+            const deg = inx - Math.floor(inx / 360) * 360;
+            const cs = _cs(deg);
+            mx.array[0] = 1;
+            mx.array[4] = cs.cs;
+            mx.array[8] = cs.cs;
+            mx.array[5] = -cs.sn;
+            mx.array[7] =  cs.sn;
+        }
+        {
+            const deg = iny - Math.floor(iny / 360) * 360;
+            const cs = _cs(deg);
+            my.array[4] = 1;
+            my.array[8] = cs.cs;
+            my.array[0] = cs.cs;
+            my.array[6] = -cs.sn;
+            my.array[2] =  cs.sn;
+        }
+        {
+            const deg = inz - Math.floor(inz / 360) * 360;
+            const cs = _cs(deg);
+            mz.array[8] = 1;
+            mz.array[0] = cs.cs;
+            mz.array[4] = cs.cs;
+            mz.array[1] = -cs.sn;
+            mz.array[3] =  cs.sn;
+        }
+        return mz.makeMultiply(my).makeMultiply(mx);
     }
 
 }

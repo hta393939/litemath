@@ -77,11 +77,9 @@ class Misc {
 // obj.vals でなにかする
         console.log('obj.vals', obj.vals);
         const samplenum = obj.vals.length;
-
+        const sumvec = new LITEMATH.Vector3();
         {
             obj.vecs = [];
-
-            const sumvec = new LITEMATH.Vector3();
 
 
             for (let i = 0; i < samplenum; ++i) {
@@ -98,6 +96,9 @@ class Misc {
             }
 
             console.log('重心', sumvec.toString());
+            {
+                window.imelement.textContent = `重心 ${sumvec.tocsv()}`;
+            }
 
             let maxvec = new LITEMATH.Vector3();
             let minvec = new LITEMATH.Vector3();
@@ -123,7 +124,6 @@ class Misc {
 // 0 1 2
 // 3 4 5
 // 6 7 8
-
             const m = new LITEMATH.Matrix3();
             for (let i = 0; i < samplenum; ++i) {
                 const vec = obj.vecs[i];
@@ -148,12 +148,12 @@ class Misc {
 
             const eigenvalues = [real];
 
-            if (Math.abs(c3s[0]) < 0.1 ** -10) {
+            if (Math.abs(c3s[0]) < (10 ** -10)) {
                 console.log('x = 0 の解を持つ');
                 const c2s = [c3s[1], c3s[2], c3s[3]];
                 const decide = c2s[1] ** 2 - 4 * c2s[2] * c2s[0];
                 if (decide < 0) {
-                    // 虚数解
+                    console.log('虚数解', decide);
                 } else {
                     const ans2s = [
                         (- c2s[1] - Math.sqrt(decide)) / (2 * c2s[2]),
@@ -169,7 +169,8 @@ class Misc {
 
             // わけわからん。(a - b) のかっこ必要なのかも。
             eigenvalues.sort((a, b) => {
-                return (a - b);
+//                return (a - b);
+                return a - b;
             });
             console.log('sorted', eigenvalues);
 
@@ -179,28 +180,21 @@ class Misc {
                 const iden = LITEMATH.Matrix.CreateIdentity(3, eigenvalue);
 
                 const m2 = m.makeAdd(iden, -1);
-                const result = m2.makePseudoinv();
+                const result = m2.makePseudoInv();
 
                 const mulm4 = m2.makeMultiply(result.m);
 
 
                 let result3 = new LITEMATH.Matrix({ row: 3, col: 1 });
                 for (let j = 0; j < 3; ++j) {
-                    result3 = result.m.getcolvec(j);
-                /*
-                result3.setArray([
-                    result.m.array[j],
-                    result.m.array[j+3],
-                    result.m.array[j+6]
-                ]);
-                */
+                    result3 = result.m.getColVec(j);
                     if (!result3.isZero()) {
                         break;
                     }
                 }
                 {
                     console.log('result3 ベクトル', result3, result3.toString());
-                    window.resultelement.textContent = `${result3.normalize().array.map(v => v.toFixed(3)).join(', ')}`;
+                    window.resultelement.textContent = `${result3.normalize().tocsv()}`;
                 }
 
                 console.log('result.det ほぼ零', result.det, 'result.m ', result.m.toString());
