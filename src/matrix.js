@@ -12,8 +12,17 @@ var LITEMATH = LITEMATH || {};
  * 実行列クラス
  */
 class Matrix {
+/**
+ * 正方行列でない
+ */
     static ERR_NOTSQUARE = 'not square';
+/**
+ * 積を取る際にサイズが一致しない
+ */
     static ERR_SIZENOTMATCH = 'size not match';
+/**
+ * 未実装
+ */
     static ERR_NI = 'not implemented';
 
     constructor(inopt) {
@@ -363,7 +372,8 @@ class Matrix {
     }
 
 /**
- * 逆行列もどきを計算する
+ * 逆行列もどきを計算する。
+ * 行列式の逆数を掛け算していない状態。
  */
     makePseudoInv() {
         if (this.row !== this.col) {
@@ -389,19 +399,19 @@ class Matrix {
  * @param {number} [c=1] この行列に掛ける係数 
  * @returns {Matrix}
  */
-add(mb, cb = 1, c = 1) {
-    if (this.row !== mb.row || this.col !== mb.col) {
-        throw new Error(Matrix.ERR_SIZENOTMATCH);
-    }
-
-    for (let i = 0; i < mb.row; ++i) {
-        for (let j = 0; j < mb.col; ++j) {
-            let offset = mb.col * i + j;
-            this.array[offset] = this.array[offset] * c + mb.array[offset] * cb;
+    add(mb, cb = 1, c = 1) {
+        if (this.row !== mb.row || this.col !== mb.col) {
+            throw new Error(Matrix.ERR_SIZENOTMATCH);
         }
+
+        for (let i = 0; i < mb.row; ++i) {
+            for (let j = 0; j < mb.col; ++j) {
+                let offset = mb.col * i + j;
+                this.array[offset] = this.array[offset] * c + mb.array[offset] * cb;
+            }
+        }
+        return this;
     }
-    return this;
-}
 
 /**
  * スカラー倍つき加算した新しい行列を返す
@@ -577,60 +587,60 @@ add(mb, cb = 1, c = 1) {
  * 0以上の実3解を持つ3次方程式の最小の実解を探す
  * @param {number[]} incoeffs 3次方程式の係数。0次から3次へ。
  */
-searchMin(incoeffs) {
-    const coeffs = [0, 0, 0, 0];
+    searchMin(incoeffs) {
+        const coeffs = [0, 0, 0, 0];
 
-// 3次の係数がマイナスになるようにする
-    let k = (incoeffs[3] > 0) ? -1 : 1;
-    for (let i = 0; i < incoeffs.length; ++i) {
-        coeffs[i] = incoeffs[i] * k;
-    }
+    // 3次の係数がマイナスになるようにする
+        let k = (incoeffs[3] > 0) ? -1 : 1;
+        for (let i = 0; i < incoeffs.length; ++i) {
+            coeffs[i] = incoeffs[i] * k;
+        }
 
-/**
- * 3次式を計算する
- * @param {number} x 
- * @returns {number}
- */
-    const _f = (x) => {
-        return coeffs[0] + coeffs[1] * x
-        + coeffs[2] * (x ** 2)
-        + coeffs[3] * (x ** 3);
-    };
+    /**
+     * 3次式を計算する
+     * @param {number} x 
+     * @returns {number}
+     */
+        const _f = (x) => {
+            return coeffs[0] + coeffs[1] * x
+            + coeffs[2] * (x ** 2)
+            + coeffs[3] * (x ** 3);
+        };
 
-    const spans = [
-        { x: 0, y: _f(0), err: 10 ** 9 },
-        { x: 0, y: _f(0), err: 10 ** 9 },
-    ];
-
-    //// 1回微分した後の2次方程式
-    const d2s = [coeffs[1] * 1, coeffs[2] * 2, coeffs[3] * 3];
-    const decide = d2s[1] ** 2 - 4 * d2s[0] * d2s[2];
-    if (decide < 0) { // 虚数解のみ
-        // 本来ありえない
-    } else { // 二解
-        let ans2s = [
-            (- d2s[1] - Math.sqrt(decide)) / (2 * d2s[2]),
-            (- d2s[1] + Math.sqrt(decide)) / (2 * d2s[2]),
+        const spans = [
+            { x: 0, y: _f(0), err: 10 ** 9 },
+            { x: 0, y: _f(0), err: 10 ** 9 },
         ];
 
-        spans[1].x = Math.min(...ans2s);
-        spans[1].y = _f(spans[1].x);
-        spans[1].err = Math.abs(spans[1].y - 0);
-    }
+        //// 1回微分した後の2次方程式
+        const d2s = [coeffs[1] * 1, coeffs[2] * 2, coeffs[3] * 3];
+        const decide = d2s[1] ** 2 - 4 * d2s[0] * d2s[2];
+        if (decide < 0) { // 虚数解のみ
+            // 本来ありえない
+        } else { // 二解
+            let ans2s = [
+                (- d2s[1] - Math.sqrt(decide)) / (2 * d2s[2]),
+                (- d2s[1] + Math.sqrt(decide)) / (2 * d2s[2]),
+            ];
 
-    for (let i = 0; i < 30; ++i) {
-        let x = (spans[0].x + spans[1].x) * 0.5;
-        const y = _f(x);
-        const obj = {
-            x,
-            y,
-            err: Math.abs(y - 0),
-        };
-        spans[(y >= 0 ? 0 : 1)] = obj;
-    }
+            spans[1].x = Math.min(...ans2s);
+            spans[1].y = _f(spans[1].x);
+            spans[1].err = Math.abs(spans[1].y - 0);
+        }
 
-    return (spans[(spans[0].err <= spans[1].err ? 0 : 1)].x);
-}
+        for (let i = 0; i < 30; ++i) {
+            let x = (spans[0].x + spans[1].x) * 0.5;
+            const y = _f(x);
+            const obj = {
+                x,
+                y,
+                err: Math.abs(y - 0),
+            };
+            spans[(y >= 0 ? 0 : 1)] = obj;
+        }
+
+        return (spans[(spans[0].err <= spans[1].err ? 0 : 1)].x);
+    }
 
 
 /**
@@ -666,6 +676,7 @@ searchMin(incoeffs) {
     }
 
 /**
+ * BOM を含まない。
  * @returns {string}
  */
     tocsv() {
@@ -766,7 +777,7 @@ searchMin(incoeffs) {
 /**
  * (0, 0, -1) を
  * extrinsic XYZ で回転する分解のうち一つを返す
- * rad ではなく deg. Z成分は0とする
+ * rad ではなく deg. 返すベクトルの Z成分 は0とする
  * @returns {Matrix}
  */
     fromNZtoThisByExtXYZ() {
@@ -775,26 +786,25 @@ searchMin(incoeffs) {
         const x = dir.array[0];
         const y = dir.array[1];
         const z = dir.array[2];
-        if (x === 0 && y === 0) { // そのままか180度回転
-            if (z <= 0) {
+
+        if (z === 0 && x === 0) { // 天井か床
+            if (y === 0) {
                 return ret;
             }
-            ret.array[1] = 180;
-            return ret;
-        }
-        if (z === 0) {
-            if (x === 0) { // 天井か床
-                ret.array[0] = (y > 0) ? 90 : -90;
-                return ret;
-            }
-            ret.array[1] = (x > 0) ? -90 : 90;
-            //ret.array[0] = Math.atan2(Math.abs(x), y);
+            ret.array[0] = (y > 0) ? 90 : -90;
             return ret;
         }
 
-        const r2 = Math.sqrt(z ** 2 + x ** 2);
-//        ret.array[1] = Math.atan2(0, 0);
-//        ret.array[0] = Math.atan2(0, 0);
+        ret.array[0] = Math.asin(y);
+        ret.array[1] = Math.atan2(-x, -z);
+        if (z === 0) {
+            ret.array[1] = (x > 0) ? -90 : 90;
+            return ret;
+        }
+        if (x === 0) {
+            ret.array[1] = (z > 0) ? 180 : 0;
+            return ret;
+        }
         return ret;
     }
 
@@ -810,7 +820,9 @@ searchMin(incoeffs) {
         const my = mx.clone();
         const mz = mx.clone();
 
-        const _cs = (deg) => {
+        const _cs = (indeg) => {
+            const deg = indeg - Math.floor(indeg / 360) * 360;
+
             const ret = {
                 cs: Math.cos(inx * Math.PI / 180),
                 sn: Math.sin(inx * Math.PI / 180),
@@ -829,8 +841,7 @@ searchMin(incoeffs) {
         };
 
         {
-            const deg = inx - Math.floor(inx / 360) * 360;
-            const cs = _cs(deg);
+            const cs = _cs(inx);
             mx.array[0] = 1;
             mx.array[4] = cs.cs;
             mx.array[8] = cs.cs;
@@ -838,8 +849,7 @@ searchMin(incoeffs) {
             mx.array[7] =  cs.sn;
         }
         {
-            const deg = iny - Math.floor(iny / 360) * 360;
-            const cs = _cs(deg);
+            const cs = _cs(iny);
             my.array[4] = 1;
             my.array[8] = cs.cs;
             my.array[0] = cs.cs;
@@ -847,8 +857,7 @@ searchMin(incoeffs) {
             my.array[2] =  cs.sn;
         }
         {
-            const deg = inz - Math.floor(inz / 360) * 360;
-            const cs = _cs(deg);
+            const cs = _cs(inz);
             mz.array[8] = 1;
             mz.array[0] = cs.cs;
             mz.array[4] = cs.cs;
@@ -856,6 +865,25 @@ searchMin(incoeffs) {
             mz.array[3] =  cs.sn;
         }
         return mz.makeMultiply(my).makeMultiply(mx);
+    }
+
+/**
+ * 基底ベクトルからextrinsic XYZ 回転を得る
+ * @param {Vector3} inx 基底Xベクトル
+ * @param {Vector3} iny 基底Yベクトル
+ * @param {Vector3} inz 基底Zベクトル
+ */
+    static BasisToExtXYZ(inx, iny, inz) {
+        const ret = new Vector3();
+        if (inx.x !== 0) {
+            ret.y = Math.asin(-inx.z);
+            ret.x = Math.atan2(iny.z, inz.z);
+            ret.z = Math.atan2(inx.y, inx.x);
+        } else {
+            ret.y = Math.asin(-inx.z);
+            ret.z = Math.atan2(-iny.x, iny.y);
+        }
+        return ret;
     }
 
 }
@@ -929,6 +957,6 @@ LITEMATH.Matrix4 = Matrix4;
 _global.LITEMATH = LITEMATH;
 
 
-})( (this || 0).self || (typeof self !== 'undefined' ? self : global) );
+})(globalThis);
 
 

@@ -112,7 +112,7 @@ class Misc {
             // maxvec, minvec の各成分のうち絶対値が最大のものを知りたい
             minvec.abs();
             const maxel = Math.max(...maxvec.array, ...minvec.array);
-            const invmaxel = (maxel !== 0) ? 2 * 1 / maxel : 1;
+            const invmaxel = (maxel !== 0) ? 1 / maxel : 1;
             for (let i = 0; i < samplenum; ++i) {
                 obj.vecs[i].multiplyScalar(invmaxel);
             }
@@ -121,9 +121,12 @@ class Misc {
         }
 
         {
-// 0 1 2
-// 3 4 5
-// 6 7 8
+/**
+ * 分散共分散行列
+ * 0 1 2
+ * 3 4 5
+ * 6 7 8
+ */
             const m = new LITEMATH.Matrix3();
             for (let i = 0; i < samplenum; ++i) {
                 const vec = obj.vecs[i];
@@ -139,6 +142,10 @@ class Misc {
                 m.array[2] += x * z;
                 m.array[5] += y * z;
             }
+            if (samplenum > 0) {
+                m.multiplyScalar(1 / samplenum);
+            }
+
             m.array[3] = m.array[1];
             m.array[6] = m.array[2];
             m.array[7] = m.array[5];
@@ -241,6 +248,15 @@ class Misc {
  */
     test3() {
         console.log('test3');
+        { // オイラー // 基底 // オイラー // 基底
+            const ev = new LITEMATH.Vector3(30, 30, 30);
+            const bx = new LITEMATH.Vector3(1, 0, 0);
+            const by = new LITEMATH.Vector3(0, 1, 0);
+            const bz = new LITEMATH.Vector3(0, 0, 1);
+
+            
+        }
+
     }
 
 /**
@@ -252,10 +268,7 @@ class Misc {
 }
 
 const misc = new Misc();
-
-window.addEventListener('DOMContentLoaded', () => {
-    misc.initialize();
-});
+misc.initialize();
 
 
 
