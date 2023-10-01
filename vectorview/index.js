@@ -18,7 +18,10 @@ class Misc {
             0, 0, 10,
             BABYLON.Vector3.Zero(),
             scene);
+        camera.position = new BABYLON.Vector3(1, 2, -10);
         camera.attachControl();
+        camera.wheelDeltaPercentage = 0.01;
+        camera.wheelPrecision = 0.01;
 
         const mesh = BABYLON.MeshBuilder.CreateBox('box', {
             width: 0.2,
@@ -30,6 +33,13 @@ class Misc {
             new BABYLON.Vector3(0, 1, 0),
             scene);
 
+        const box0 = BABYLON.MeshBuilder.CreateBox('box0',
+            { width: 0.1, height: 0.1, depth: 0.1 },
+            scene);
+        const layer = new BABYLON.UtilityLayerRenderer(scene);
+        const gizmo = new BABYLON.PositionGizmo(layer);
+        gizmo.attachedMesh = box0;
+
         engine.runRenderLoop(() => {
             scene.render();
         });
@@ -38,12 +48,22 @@ class Misc {
     setListener() {
         {
             const el = document.getElementById('calcbutton');
-            if (el) {
-                el.addEventListener('click', () => {
-                    const numsel = document.getElementById('numberselement');
-                    this.calc(numsel?.value ?? '');
-                });
-            }
+            el?.addEventListener('click', () => {
+                const numsel = document.getElementById('numberselement');
+                this.calc(numsel?.value ?? '');
+            });
+        }
+
+        {
+            const el = document.getElementById('addbutton');
+            el?.addEventListener('click', () => {
+                const vs = [
+                    window.vecx.value,
+                    window.vecy.value,
+                    window.vecz.value,
+                ].map(v => Number.parseFloat(v));
+                this.addVector(...vs);
+            });
         }
     }
 
@@ -235,19 +255,6 @@ class Misc {
     }
 
 
-
-/**
- * 
- */
-    test1() {
-        const m1 = LITEMATH.Matrix.CreateIdentity(3);
-        const m2 = LITEMATH.Matrix.CreateIdentity(3);
-
-        const m3 = m1.makeMultiply(m2);
-
-        console.log('test1, m3', m3.totex());
-    }
-
 /**
  * 
  */
@@ -262,28 +269,32 @@ class Misc {
         console.log('test2 coeffs', coeffs);
     }
 
-/**
- * 
- */
-    test3() {
-        console.log('test3');
-        { // オイラー // 基底 // オイラー // 基底
-            const ev = new LITEMATH.Vector3(30, 30, 30);
-            const bx = new LITEMATH.Vector3(1, 0, 0);
-            const by = new LITEMATH.Vector3(0, 1, 0);
-            const bz = new LITEMATH.Vector3(0, 0, 1);
+    addVector(x, y, z) {
+        const scene = this.scene;
 
-            
-        }
+        const points = [
+            BABYLON.Vector3.Zero(),
+            new BABYLON.Vector3(x, y, z),
+        ];
+        const line = BABYLON.MeshBuilder.CreateLines('line',
+            { points },
+            scene);
+
+        /*
+        const dir = new BABYLON.Vector3(x, y, z);
+        const len = dir.length();
+        const capsule = BABYLON.MeshBuilder.CreateCylinder(`cyl`,
+            {
+                diameterTop: 0.4,
+                height: len,
+                diameterBottom: 0,
+            },
+            scene);
+        capsule.position = new BABYLON.Vector3(0, len * 0.5, 0);
+            */
 
     }
 
-/**
- * 
- */
-    test4() {
-        console.log('test4');
-    }
 }
 
 const misc = new Misc();
