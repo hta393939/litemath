@@ -10,7 +10,11 @@ class Misc {
     async initialize() {
         this.setListener();
 
-        const engine = new BABYLON.Engine(window.babylon);
+        const canvas = window.babylon;
+        canvas.width = 512;
+        canvas.height = 288;
+
+        const engine = new BABYLON.Engine(canvas);
         const scene = new BABYLON.Scene(engine);
         this.scene = scene;
 
