@@ -2,9 +2,12 @@
  * @file index.js
  */
 
+const _id = () => {
+    return new MediaStream().id;
+};
+
 class Misc {
     constructor() {
-        this.cl = this.constructor.name;
     }
 
     async initialize() {
@@ -12,27 +15,50 @@ class Misc {
 
         const canvas = window.babylon;
         canvas.width = 512;
-        canvas.height = 288;
+        canvas.height = 256;
 
-        const engine = new BABYLON.Engine(canvas);
+        const engine = new BABYLON.Engine(canvas, true, {
+            preserveDrawingBuffer: true,
+        });
         const scene = new BABYLON.Scene(engine);
         this.scene = scene;
 
-        const camera = new BABYLON.ArcRotateCamera('camera',
-            0, 0, 10,
-            BABYLON.Vector3.Zero(),
-            scene);
-        camera.position = new BABYLON.Vector3(1, 2, -10);
-        camera.attachControl();
-        camera.wheelDeltaPercentage = 0.01;
-        camera.wheelPrecision = 0.01;
+        for (let i = 0; i < 4; ++i) {
+            const camera = new BABYLON.ArcRotateCamera('camera',
+                -Math.PI * 0.5, 0, 10,
+                BABYLON.Vector3.Zero(),
+                scene);
+            camera.wheelDeltaPercentage = 0.01;
+            camera.wheelPrecision = 0.01;
+            let u = ((i & 1) === 0) ? 0 : 0.5;
+            let v = (Math.floor(i / 2) === 0) ? 0.5 : 0;
+            camera.viewport = new BABYLON.Viewport(u, v, 0.5, 0.5);
 
+            scene.activeCameras.push(camera);
+
+            if (i === 2) {
+                camera.position = new BABYLON.Vector3(1, 2, -5);
+                camera.attachControl();
+            } else {
+                if (i === 0) {
+//                    camera.setPosition(-Math.PI * 0.5, 0, 5);
+                }
+                if (i === 1) {
+                    camera.position = new BABYLON.Vector3(0, 0, -5);
+                }
+                if (i === 3) {
+                    camera.position = new BABYLON.Vector3(5, 0, 0);
+                }
+            }
+        }
+
+        /*
         const mesh = BABYLON.MeshBuilder.CreateBox('box', {
             width: 0.2,
             height: 0.4,
             depth: 0.8,
         }, scene);
-
+*/
         const light = new BABYLON.HemisphericLight('light',
             new BABYLON.Vector3(0, 1, 0),
             scene);
@@ -283,6 +309,25 @@ class Misc {
         const line = BABYLON.MeshBuilder.CreateLines('line',
             { points },
             scene);
+
+        for (let i = 0; i < 2; ++i) {
+            if (i === 0) {
+                continue;
+            }
+            const p = points[i];
+            const box = BABYLON.MeshBuilder.CreateBox(_id(),
+                { width: 0.2, height: 0.2, depth: 0.2 },
+                scene);
+            box.setAbsolutePosition(p);
+
+            {
+                const mtl = new BABYLON.StandardMaterial(_id(),
+                    scene);
+                mtl.diffuseColor = (i === 0)
+                    ? new BABYLON.Color3(1.0, 1, 1) : new BABYLON.Color3(1, 0.6, 0);
+                box.material = mtl;
+            }
+        }
 
         /*
         const dir = new BABYLON.Vector3(x, y, z);
